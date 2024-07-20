@@ -1,0 +1,50 @@
+nc: 80 # number of classes
+#depth_multiple: 0.33  # model depth multiple
+depth_multiple: 1  # layer channel multiple
+#width_multiple: 0.5  # layer channel multiple
+width_multiple: 1  # layer channel multiple
+anchors:
+  - [ 10,13, 16,30, 33,23 ]
+  - [ 30,61, 62,45, 59,119 ]
+  - [ 116,90, 156,198, 373,326 ]
+
+backbone:
+  [ [ -1, 1, Conv, [ 16, 6, 2, 2 ] ],  # 0
+    [ -1, 1, LSBlock, [ 48, 2, 3 ] ],  # 1
+    [ -1, 1, LSBlock, [ 48, 1, 3 ] ],
+    [ -1, 1, CMA_encoder, [ 48,2,False ] ],
+    [ -1, 1, LSBlock, [ 74, 2, 3 ] ],  #4
+    [ -1, 1, LSBlock, [ 74, 1, 3 ] ],
+    [ -1, 1, CMA_encoder, [ 74,2,True ] ],
+    [ -1, 1, LSBlock, [ 128, 2, 3 ] ],  #7
+    [ -1, 1, LSBlock, [ 128, 1, 3 ] ],
+    [ -1, 1,CMA_encoder, [ 128,3 ,False ] ],
+    [ -1, 1, LSBlock, [ 156, 2, 5 ] ],  #10
+    [ -1, 1, LSBlock, [ 156, 1, 5 ] ],
+    [ -1, 1,CMA_encoder, [ 156,4,False ] ],
+    [ -1,1, SPPF, [ 640, 5 ] ],
+  ]
+
+# fpn + det
+head:
+    [ [ -1, 1, GSLConv, [ 256, 1, 1 ] ],
+      [ -1, 1, nn.Upsample, [ None, 2, 'nearest' ] ],
+      [ [ -1, 9 ], 1, Concat, [ 1 ] ],
+      [ -1, 3, C3, [ 256, False ] ],  # 17
+
+      [ -1, 1, GSLConv, [ 128, 1, 1 ] ],
+      [ -1, 1, nn.Upsample, [ None, 2, 'nearest' ] ],
+      [ [ -1, 6 ], 1, Concat, [ 1 ] ],
+      [ -1, 3, C3, [ 128, False ] ],  # 21-small
+
+      [ -1, 1, GSLConv, [ 128, 3, 2 ] ],
+      [ [ -1, 18 ], 1, Concat, [ 1 ] ],
+      [ -1, 3, C3, [ 256, False ] ],  # 24-medium
+
+      [ -1, 1, GSLConv, [ 228, 3, 2 ] ],
+      [ [ -1, 14 ], 1, Concat, [ 1 ] ],
+      [ -1, 3, C3, [ 490, False ] ],  # 27-large
+
+      [ [ 21, 24, 27 ], 1, Detect, [ nc, anchors ] ], # Detect(21, 24, 27)
+    ]
+
